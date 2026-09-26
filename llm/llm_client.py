@@ -190,25 +190,46 @@ class BaseLLMProvider(ABC):
         """
         Extract clean JSON text from LLM response, handling markdown codeblocks.
 
-        Removes wrapping ```json ... ``` or ``` ... ``` markers.
+        Removes wrapping ```json ... ``` or ``` ... ``` markers while preserving
+        code fences embedded inside JSON string values.
         """
+        if not text:
+            return ""
         text = text.strip()
-        # Regex matching markdown code blocks with optional json tag
-        pattern = r"```(?:json)?\s*\n?(.*?)\n?\s*```"
-        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-        
-        # If no code block found, find first '{' or '[' and last '}' or ']'
+
+        # 1. Direct validation: if already valid JSON, return immediately
+        try:
+            json.loads(text)
+            return text
+        except (ValueError, TypeError):
+            pass
+
+        # 2. Check if text is enclosed in outermost markdown code blocks: ```json ... ``` or ``` ... ```
+        if text.startswith("```") and text.endswith("```"):
+            first_newline = text.find("\n")
+            if first_newline != -1:
+                candidate = text[first_newline + 1 : -3].strip()
+                try:
+                    json.loads(candidate)
+                    return candidate
+                except (ValueError, TypeError):
+                    text = candidate
+
+        # 3. Find outermost JSON object {...} or array [...]
         first_brace = text.find("{")
         first_bracket = text.find("[")
-        
+
         if first_brace != -1 or first_bracket != -1:
-            start = first_brace if (first_brace != -1 and (first_bracket == -1 or first_brace < first_bracket)) else first_bracket
-            end_char = "}" if start == first_brace else "]"
-            end = text.rfind(end_char)
-            if end != -1:
-                return text[start:end+1].strip()
+            if first_brace != -1 and (first_bracket == -1 or first_brace < first_bracket):
+                start = first_brace
+                end = text.rfind("}")
+            else:
+                start = first_bracket
+                end = text.rfind("]")
+
+            if end != -1 and end > start:
+                candidate = text[start : end + 1].strip()
+                return candidate
 
         return text
 

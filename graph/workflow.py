@@ -193,7 +193,7 @@ def context_retriever_node(state: AgentState) -> AgentState:
         from context.context_retriever import ContextRetriever, RetrievedContextPackage  # noqa: PLC0415
 
         retriever = ContextRetriever()
-        pkg: RetrievedContextPackage = retriever.retrieve_context(changed_functions)
+        pkg: RetrievedContextPackage = retriever.retrieve_for_changes(changed_functions)
         snippet = pkg.to_llm_prompt_snippet()
         return {
             "related_context": pkg,

@@ -210,6 +210,7 @@ class GeminiProvider(BaseLLMProvider):
             config_kwargs: Dict[str, Any] = {
                 "temperature": temperature,
                 "response_mime_type": "application/json",
+                "response_schema": schema,
                 "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
             }
             if system_prompt:

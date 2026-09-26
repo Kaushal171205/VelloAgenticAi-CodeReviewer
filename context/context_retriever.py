@@ -418,9 +418,21 @@ class ContextRetriever:
         total_related = 0
 
         for change in target_changes:
-            fn_name = change.function_name or Path(change.file_path).stem
+            if isinstance(change, str):
+                fn_name = change
+                file_path = ""
+                diff_content = ""
+                added_lines = None
+                summary = ""
+            else:
+                fn_name = getattr(change, "function_name", None) or Path(getattr(change, "file_path", "unknown")).stem
+                file_path = getattr(change, "file_path", "")
+                diff_content = getattr(change, "diff_content", "")
+                added_lines = getattr(change, "added_lines", None)
+                summary = getattr(change, "summary", "")
+
             # Deduplicate by (file_path, fn_name) so multiple hunks in one function don't duplicate queries
-            change_key = f"{change.file_path}:{fn_name}"
+            change_key = f"{file_path}:{fn_name}"
             if change_key in seen_functions:
                 continue
             seen_functions.add(change_key)
@@ -430,18 +442,18 @@ class ContextRetriever:
                 contexts.append(
                     FunctionContext(
                         changed_function=fn_name,
-                        file_path=change.file_path,
-                        diff_summary=change.summary,
+                        file_path=file_path,
+                        diff_summary=summary,
                     )
                 )
                 continue
 
             ctx = self.retrieve_for_function(
                 function_name=fn_name,
-                file_path=change.file_path,
-                diff_content=change.diff_content,
-                added_lines=change.added_lines,
-                summary=change.summary,
+                file_path=file_path,
+                diff_content=diff_content,
+                added_lines=added_lines,
+                summary=summary,
                 seen_function_keys=seen_keys,
             )
             contexts.append(ctx)

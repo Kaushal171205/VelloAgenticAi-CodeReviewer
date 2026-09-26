@@ -40,10 +40,14 @@ build/
 storage/chroma/
 storage/reviews.db
 storage/*.db
+storage/*.db-shm
+storage/*.db-wal
 storage/*.sqlite
 storage/*.sqlite3
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
 
 # ── OS & Editor Artifacts ────────────────────────────────────────────────────
 .DS_Store
