@@ -1,0 +1,8 @@
+{
+  "dependencies": [".", "pydantic-settings>=2.3.0"],
+  "graphs": {
+    "enterprise_reviewer": "./graph/studio_graph.py:graph"
+  },
+  "env": ".env",
+  "python_version": "3.13"
+}

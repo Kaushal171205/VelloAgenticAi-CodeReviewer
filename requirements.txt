@@ -1,0 +1,37 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AI-Powered Enterprise Code Review System
+# requirements.txt — Phase 6 (RAG Security Scanner)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Environment & Configuration ───────────────────────────────────────────────
+python-dotenv>=1.0.0
+
+# ── UI ────────────────────────────────────────────────────────────────────────
+streamlit>=1.41.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+pydantic>=2.7.0          # settings validation and data models
+pydantic-settings>=2.3.0 # env-aware settings management
+rich>=13.7.0             # pretty terminal output / logging
+requests>=2.31.0         # HTTP client for Ollama / REST
+
+# ── LLM Providers (Phase 4) ───────────────────────────────────────────────────
+google-genai>=0.1.1      # Official Google Gemini SDK
+
+# ── RAG & Vector Storage (Phase 6) ─────────────────────────────────────────────
+chromadb>=1.5.9          # Local embedded vector store (>=1.5.9 avoids Rust SQLite migration slice panic)
+sentence-transformers>=3.0.0 # Local embeddings generation
+
+# ── LangGraph Workflow (Phase 10 & 11) ──────────────────────────────────────────
+langgraph>=1.2.0         # Stateful multi-agent graph orchestration
+langchain-core>=1.6.0    # LangChain core primitives used by LangGraph
+langgraph-checkpoint-sqlite>=3.1.1 # SQLite checkpointer for LangGraph state persistence
+
+# ── Phase 2: Secret Detection ─────────────────────────────────────────────────
+detect-secrets>=1.5.0    # entropy + pattern-based secret scanning
+
+# ── Phase 3: Static Analysis ──────────────────────────────────────────────────
+bandit>=1.7.0            # Python security linter
+
+# ── Testing ────────────────────────────────────────────────────────────────────
+pytest>=8.0.0
