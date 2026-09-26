@@ -34,7 +34,7 @@ from pydantic import BaseModel, Field
 from agents.sanitizer import SanitizerInput, sanitize
 from agents.static_analysis_agent import FindingConfidence, FindingSeverity
 from llm.llm_client import BaseLLMProvider, get_llm_provider
-from tools.language_utils import detect_language
+from tools.language_utils import detect_language, format_code_for_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -296,18 +296,24 @@ def review_logic(
                 secrets_detected=secrets_count,
             )
 
-    # 3. Construct Review Prompt with Line Numbers for Precise Referencing
-    lines = sanitized_code.splitlines()
-    numbered_code = "\n".join(f"{i+1:4d} | {line}" for i, line in enumerate(lines))
+    # 3. Construct Review Prompt
+    code_block, is_diff = format_code_for_prompt(sanitized_code, input_data.filename)
 
-    _, lang_id = detect_language(input_data.filename)
-    fence = f"```{lang_id}"
-
-    prompt = (
-        f"Perform an exhaustive business logic and correctness review on the following code:\n\n"
-        f"File: {input_data.filename}\n"
-        f"{fence}\n{numbered_code}\n```\n"
-    )
+    if is_diff:
+        prompt = (
+            "Perform an exhaustive business logic and correctness review on the code changes below.\n\n"
+            "The input is a unified Git diff packaged for review: each section describes a changed "
+            "file with metadata, followed by diff hunks where '+' marks added lines and '-' marks "
+            "removed lines. Analyze the added/changed code for logic and correctness flaws.\n\n"
+            f"Change set: {input_data.filename}\n"
+            f"{code_block}\n"
+        )
+    else:
+        prompt = (
+            f"Perform an exhaustive business logic and correctness review on the following code:\n\n"
+            f"File: {input_data.filename}\n"
+            f"{code_block}\n"
+        )
 
     if input_data.context_notes:
         prompt += f"\nAdditional Context / Requirements:\n{input_data.context_notes}\n"

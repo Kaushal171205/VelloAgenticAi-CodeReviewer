@@ -511,6 +511,54 @@ def report_node(state: AgentState) -> AgentState:
 
     lines += ["", "---", ""]
 
+    # ── Agent execution transparency ──────────────────────────────────────────
+    # Always show which agents ran, their status, and how many findings each
+    # produced — so a 0-finding report is never ambiguous about whether the
+    # multi-agent pipeline actually executed.
+    sec_res = state.get("security_findings")
+    log_res = state.get("logic_findings")
+    stat_res = state.get("static_findings")
+
+    def _agent_status(obj: Any) -> str:
+        if obj is None:
+            return "not run"
+        return str(getattr(obj, "status", "completed"))
+
+    def _agent_count(obj: Any) -> int:
+        if obj is None:
+            return 0
+        fc = getattr(obj, "finding_count", None)
+        if isinstance(fc, int):
+            return fc
+        found = getattr(obj, "findings", None)
+        return len(found) if isinstance(found, list) else 0
+
+    provider_name = (
+        getattr(sec_res, "provider_name", "")
+        or getattr(log_res, "provider_name", "")
+        or "n/a"
+    )
+    model_name = (
+        getattr(sec_res, "model_name", "")
+        or getattr(log_res, "model_name", "")
+        or "n/a"
+    )
+
+    lines += [
+        "## 🤖 Agent Execution",
+        "",
+        "| Agent | Status | Findings |",
+        "|-------|--------|----------|",
+        f"| Static Analysis (Bandit) | {_agent_status(stat_res)} | {_agent_count(stat_res)} |",
+        f"| Security Scanner (RAG + LLM) | {_agent_status(sec_res)} | {_agent_count(sec_res)} |",
+        f"| Logic Reviewer (LLM) | {_agent_status(log_res)} | {_agent_count(log_res)} |",
+        "",
+        f"**LLM Provider**: `{provider_name}` · **Model**: `{model_name}`",
+        "",
+        "---",
+        "",
+    ]
+
     # ── Findings by severity ──────────────────────────────────────────────────
     if total == 0:
         lines += [

@@ -94,6 +94,50 @@ def is_python(filename: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Prompt formatting for review agents
+# ---------------------------------------------------------------------------
+
+def is_diff_payload(text: str) -> bool:
+    """Detect a pre-formatted markdown diff payload.
+
+    ``diff_processing.chunker.create_review_prompt_payload`` emits a markdown
+    document (``## Changed Code for Review`` header, ``### File:`` sections and
+    embedded ````` ```diff ````` fenced hunks). Such a payload is already
+    prompt-ready: re-wrapping it in line numbers and an outer code fence
+    corrupts it and degrades LLM detection.
+    """
+    if not text:
+        return False
+    head = text.lstrip()[:400]
+    return (
+        head.startswith("## Changed Code for Review")
+        or "```diff" in text
+        or ("### File:" in text and "**Change Type**" in text)
+    )
+
+
+def format_code_for_prompt(source_code: str, filename: str) -> tuple[str, bool]:
+    """Build a clean, LLM-ready code block for review prompts.
+
+    Returns ``(block, is_diff)`` where:
+      - ``is_diff`` is True when *source_code* is a pre-formatted markdown diff
+        payload. In that case ``block`` is the payload verbatim (no line
+        numbers, no outer fence) so the embedded ````` ```diff ````` fences stay
+        intact.
+      - Otherwise ``block`` is the line-numbered source wrapped in a fenced code
+        block for the language detected from *filename*.
+    """
+    text = source_code or ""
+    if is_diff_payload(text):
+        return text.rstrip(), True
+
+    lines = text.splitlines()
+    numbered = "\n".join(f"{i + 1:4d} | {ln}" for i, ln in enumerate(lines))
+    _, lang_id = detect_language(filename)
+    return f"```{lang_id}\n{numbered}\n```", False
+
+
+# ---------------------------------------------------------------------------
 # Language-agnostic syntax validation
 # ---------------------------------------------------------------------------
 

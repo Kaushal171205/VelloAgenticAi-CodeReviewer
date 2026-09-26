@@ -27,7 +27,7 @@ from agents.sanitizer import SanitizerInput, sanitize
 from agents.static_analysis_agent import FindingConfidence, FindingSeverity
 from llm.llm_client import BaseLLMProvider, get_llm_provider
 from storage.vector_store import RetrievedDocument, SecurityVectorStore
-from tools.language_utils import detect_language
+from tools.language_utils import detect_language, format_code_for_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -280,11 +280,7 @@ def scan_security(
             )
 
     # 4. Build RAG Augmented Prompt
-    lines = sanitized_code.splitlines()
-    numbered_code = "\n".join(f"{i+1:4d} | {line}" for i, line in enumerate(lines))
-
-    _, lang_id = detect_language(input_data.filename)
-    fence = f"```{lang_id}"
+    code_block, is_diff = format_code_for_prompt(sanitized_code, input_data.filename)
 
     context_str = ""
     if retrieved_docs:
@@ -296,10 +292,24 @@ def scan_security(
             )
         context_str += "--- END CONTEXT ---\n"
 
+    if is_diff:
+        header = (
+            "Perform a comprehensive security vulnerability scan on the code changes below.\n\n"
+            "The input is a unified Git diff packaged for review: each section describes a "
+            "changed file with metadata, followed by diff hunks where '+' marks added lines "
+            "and '-' marks removed lines. Analyze the added/changed code for vulnerabilities.\n\n"
+            f"Change set: {input_data.filename}\n\n"
+            f"{code_block}\n"
+        )
+    else:
+        header = (
+            "Perform a comprehensive security vulnerability scan on the following code:\n\n"
+            f"File: {input_data.filename}\n"
+            f"{code_block}\n"
+        )
+
     prompt = (
-        f"Perform a comprehensive security vulnerability scan on the following code:\n\n"
-        f"File: {input_data.filename}\n"
-        f"{fence}\n{numbered_code}\n```\n"
+        f"{header}"
         f"{context_str}\n"
         f"Analyze the source code thoroughly. Cross-reference with the retrieved security knowledge "
         f"and return a complete list of vulnerabilities adhering to the schema."
